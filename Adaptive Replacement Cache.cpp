@@ -1,12 +1,11 @@
 ﻿// Adaptive Replacement Cache.cpp : 此文件包含 "main" 函数。程序执行将在此处开始并结束。
 //
 
-#include "KArcLruPart.h"
-#include "KArcLfuPart.h"
+#include <string>
+#include "KArcCache.h"
 int main()
 {
-    KArcCache::ArcLruPart<int, int> a(20,10);
-    KArcCache::ArcLfuPart<int, int> b(20, 10);
+    KArcCache::ArcCache<int, std::string> a(20, 2);
 
 }
 

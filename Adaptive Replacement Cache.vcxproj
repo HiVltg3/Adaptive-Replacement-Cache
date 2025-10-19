@@ -130,9 +130,11 @@
     <ClCompile Include="Adaptive Replacement Cache.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="KArcCache.h" />
     <ClInclude Include="KArcCacheNode.h" />
     <ClInclude Include="KArcLfuPart.h" />
     <ClInclude Include="KArcLruPart.h" />
+    <ClInclude Include="KICachePolicy.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

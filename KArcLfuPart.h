@@ -50,7 +50,7 @@ namespace KArcCache
 			if (freqMap_.find(1) == freqMap_.end()) {
 				freqMap_[1] = std::list<NodePtr>();
 			}
-			freqMap_.push_back(newNode);
+			freqMap_[1].push_back(newNode);
 			minFreq_ = 1;
 			return true;
         }
@@ -92,7 +92,7 @@ namespace KArcCache
 				freqMap_.erase(minFreq_);
 				//更新最小频率
 				if (!freqMap_.empty()) {
-					minFreq_ = freqMap_.begin->first;
+					minFreq_ = freqMap_.begin()->first;
 				}
 			}
 
@@ -145,11 +145,11 @@ namespace KArcCache
 
 		bool put(Key key, Value value)
 		{
-			if (capacity_ == 0) return;
+			if (capacity_ == 0) return false;
 			std::lock_guard<std::mutex> lk(mutex_);
 			auto it = mainCache_.find(key);
 			if (it != mainCache_.end()) {
-				return updateExistingNode(key, value);
+				return updateExistingNode(it->second, value);
 
 			}
 			return addNewNode(key, value);
@@ -180,6 +180,7 @@ namespace KArcCache
 			if (it != ghostCache_.end()) {
 				removeFromGhost(it->second);
 				ghostCache_.erase(it);
+				addNewNode(it->second->getKey(), it->second->getValue());
 				return true;
 			}
 			return false;

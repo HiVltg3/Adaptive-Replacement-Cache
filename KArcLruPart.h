@@ -54,7 +54,7 @@ namespace KArcCache {
 			if (mainCache_.size() >= capacity_) {
 				evictLeastRecent();
 			}
-			NodePtr newNode = std::make_shared<NodePtr>(key, value);
+			NodePtr newNode = std::make_shared<NodeType>(key, value);
 			mainCache_[key] = newNode;
 			addToFront(newNode);
 			return true;
@@ -81,7 +81,7 @@ namespace KArcCache {
 
 		void addToFront(NodePtr node)
 		{
-			mainHead_->prev_->next_ = node;
+			mainHead_->prev_.lock()->next_ = node;
 			node->prev_ = mainHead_->prev_;
 			node->next_ = mainHead_;
 			mainHead_->prev_ = node;
@@ -153,14 +153,13 @@ namespace KArcCache {
 			initializeLists();
 		}
 
-		bool get(Key& key, Value& value, bool& shouldTransform) {
+		bool get(Key& key, Value& value) {
 			std::lock_guard<std::mutex> lock(mutex_);
 			auto it = mainCache_.find(key);
 			auto ghostIt = ghostCache_.find(key);
 			if (it != mainCache_.end()) {
 				value = it->second->getValue();
 				updateNodeAccess(it->second);
-				shouldTransform = updateNodeAccess(it->second);
 				return true;
 			}
 			return false;
@@ -181,6 +180,7 @@ namespace KArcCache {
 			if (it != ghostCache_.end()) {
 				removeFromGhost(it->second);
 				ghostCache_.erase(it);
+				addNewNode(it->second->getKey(), it->second->getValue());
 				return true;
 			}
 			return false;

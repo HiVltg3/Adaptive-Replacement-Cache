@@ -29,5 +29,11 @@
     <ClInclude Include="KArcLfuPart.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="KArcCache.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="KICachePolicy.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
