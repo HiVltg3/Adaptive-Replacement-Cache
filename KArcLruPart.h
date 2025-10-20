@@ -5,7 +5,7 @@
 namespace KArcCache {
 
 	template<typename Key, typename Value>
-	class ArcLruPart {
+	class ArcLruPart  {
 	public:
 		using NodeType = ArcNode<Key, Value>;
 		using NodePtr = std::shared_ptr<NodeType>;
@@ -81,10 +81,10 @@ namespace KArcCache {
 
 		void addToFront(NodePtr node)
 		{
-			mainHead_->prev_.lock()->next_ = node;
-			node->prev_ = mainHead_->prev_;
-			node->next_ = mainHead_;
-			mainHead_->prev_ = node;
+			node->next_ = mainHead_->next_;
+			node->prev_ = mainHead_;
+			mainHead_->next_->prev_ = node;
+			mainHead_->next_ = node;
 		}
 
 		void evictLeastRecent()
@@ -153,10 +153,9 @@ namespace KArcCache {
 			initializeLists();
 		}
 
-		bool get(Key& key, Value& value) {
+		bool get(Key key, Value& value) {
 			std::lock_guard<std::mutex> lock(mutex_);
 			auto it = mainCache_.find(key);
-			auto ghostIt = ghostCache_.find(key);
 			if (it != mainCache_.end()) {
 				value = it->second->getValue();
 				updateNodeAccess(it->second);
@@ -164,23 +163,31 @@ namespace KArcCache {
 			}
 			return false;
 		}
-        
-		bool put(Key key, Value value) {
-			if (capacity_ == 0) return false;
+		Value get(Key key) {
+			Value value;
+			get(key, value);
+			return value;
+		}
+		void put(Key key, Value value) {
+			if (capacity_ == 0) return;
 			std::lock_guard<std::mutex> lock(mutex_);
+			// 命中：只更新值，不动链表、不动 ghost
 			auto it = mainCache_.find(key);
 			if (it != mainCache_.end()) {
-				return updateExistingNode(it->second, value);
+				updateExistingNode(it->second, value);
+				return;                                  // 关键：命中早退
 			}
-			return addNewNode(key, value);
+			// 未命中：必要时淘汰旧节点，再新建
+			addNewNode(key, value);
 		}
 
 		bool checkGhost(Key key) {
 			auto it = ghostCache_.find(key);
 			if (it != ghostCache_.end()) {
+				NodePtr node = it->second;
 				removeFromGhost(it->second);
 				ghostCache_.erase(it);
-				addNewNode(it->second->getKey(), it->second->getValue());
+				addNewNode(node->getKey(), node->getValue());
 				return true;
 			}
 			return false;
@@ -195,6 +202,11 @@ namespace KArcCache {
 			}
 			--capacity_;
 			return true;
+		}
+
+		bool contain(Key key)
+		{
+			return mainCache_.find(key) != mainCache_.end();
 		}
 	};
 }

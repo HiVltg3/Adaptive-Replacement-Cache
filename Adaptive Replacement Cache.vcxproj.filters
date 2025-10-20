@@ -18,6 +18,9 @@
     <ClCompile Include="Adaptive Replacement Cache.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="testHotDataAccess.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="KArcCacheNode.h">
@@ -33,6 +36,12 @@
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="KICachePolicy.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="LFU.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="LRU_K.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

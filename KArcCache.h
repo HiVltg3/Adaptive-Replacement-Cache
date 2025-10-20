@@ -52,27 +52,33 @@ namespace KArcCache
 		// 实现 KICachePolicy::put - 插入或更新缓存项
 		void put(Key key, Value value) override {
 			// 1. 检查并执行 ARC 容量调整（Ghost Cache 命中时）
-			checkGhostCaches(key);
+			//顶部调用 `checkGhostCaches(key)`。这会把“写入”也当成访问信号，
+			// 30% 写入时 ARC 会频繁错调容量，命中率被拖垮。把 ghost 自适应放到 **get 未命中** 时，再决定是否提升：
+			//checkGhostCaches(key);
 
 			// 2. 执行 put 操作：优先检查 LFU（频率更高），否则交给 LRU
 			if (lfuPart_->contain(key)) {
 				lfuPart_->put(key, value);
+				return;
 			}
-			else {
-				// 新节点，或 LRU 部分的节点（包括刚刚从 Ghost 提升上来的节点）
+			if (lruPart_->contain(key)) { 
 				lruPart_->put(key, value);
+				return; 
 			}
+			// 新节点，或 LRU 部分的节点（包括刚刚从 Ghost 提升上来的节点）
+			lruPart_->put(key, value);
 		}
 
 		// 实现 KICachePolicy::get (带传出参数) - 查找缓存项
 		bool get(Key key, Value& value) override {
-			// 1. 尝试从 LRU 部分获取（LRU内部会更新节点位置）
-			if (lruPart_->get(key, value)) {
-				return true;
-			}
-			// 2. 尝试从 LFU 部分获取（LFU内部会更新频率）
-			if (lfuPart_->get(key, value)) {
-				return true;
+			if (lruPart_->get(key, value)) return true;
+			if (lfuPart_->get(key, value)) return true;
+
+			// miss：检查 ghost，再次尝试
+			bool adjusted = checkGhostCaches(key);
+			if (adjusted) {
+				if (lruPart_->get(key, value)) return true;
+				if (lfuPart_->get(key, value)) return true;
 			}
 			return false;
 		}
@@ -84,7 +90,7 @@ namespace KArcCache
 				return value;
 			}
 			// 最佳实践：如果未找到，抛出异常
-			throw std::out_of_range("Key not found in ArcCache");
+			return value;
 		}
 	};
 };

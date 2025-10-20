@@ -12,6 +12,8 @@ namespace KArcCache
 		using NodePtr = std::shared_ptr<NodeType>;
 		using NodeMap = std::unordered_map<Key, NodePtr>;
 		using FreqMap = std::unordered_map<size_t, std::list<NodePtr>>;
+
+
 	private:
 		size_t capacity_;
 		size_t ghostCapacity_;
@@ -46,6 +48,10 @@ namespace KArcCache
 				evictLeastFrequent();
 			}
 			NodePtr newNode = std::make_shared<NodeType>(key, value);
+			newNode->accessCount_ = 1;
+			//频次初始化与提升不一致，导致同一节点在两个桶里  
+			//如果把新节点丢到 `freqMap_[1]`，但节点自身 `accessCount_` 可能为 0。`updateNodeFrequency` 读到 `oldFreq=0`，会从 `freqMap_[0]` 删（其实没有），
+			// 再把节点又放进 `freqMap_[1]`，于是一个节点在 `freqMap_[1]` 出现两次，随后逐出与遍历容易触发容器断言。
 			mainCache_[key] = newNode;
 			if (freqMap_.find(1) == freqMap_.end()) {
 				freqMap_[1] = std::list<NodePtr>();
@@ -58,53 +64,70 @@ namespace KArcCache
         void updateNodeFrequency(NodePtr node)
         {
 			size_t oldFreq = node->getAccessCount();
-			node->increaseAccessCount();
-			size_t newFreq = node->getAccessCount();
-
-			// 从旧频率列表中移除
-			auto& oldList = freqMap_[oldFreq];
-			oldList.remove(node);
-			if (oldList.empty()) {
-				freqMap_.erase(oldFreq);//删除表
-				if (oldFreq == minFreq_) {
-					minFreq_ = newFreq;
+			if (oldFreq) {// 只有存在的桶才尝试移除
+				auto itOld = freqMap_.find(oldFreq);
+				if (itOld != freqMap_.end()) {
+					itOld->second.remove(node);
+					if (itOld->second.empty()) {
+						freqMap_.erase(itOld);
+						if (minFreq_ == oldFreq) {// 重新计算最小频次
+							if (freqMap_.empty()) minFreq_ = 0;
+							else {
+								size_t m = SIZE_MAX;
+								for (auto& kv : freqMap_) m = std::min(m, kv.first);
+								minFreq_ = m;
+							}
+						}
+					}
 				}
 			}
+			node->increaseAccessCount();
+			size_t newFreq = node->getAccessCount();
 
 			// 添加到新频率列表
 			if (freqMap_.find(newFreq) == freqMap_.end()) {
 				freqMap_[newFreq] = std::list<NodePtr>();
 			}
 			freqMap_[newFreq].push_back(node);
+			if (!minFreq_ || newFreq < minFreq_) minFreq_ = newFreq;
         }
 
-        void evictLeastFrequent()
-        {
+		void evictLeastFrequent()
+		{
 			if (freqMap_.empty()) return;
-			// 获取最小频率的列表
-			auto& minFreqList = freqMap_[minFreq_];
-			if (minFreqList.empty()) return;
-			NodePtr leastNode = minFreqList.front();
-			minFreqList.pop_front();
 
-			// 如果该频率的列表为空，则删除该频率项
-			if (minFreqList.empty()) {
-				freqMap_.erase(minFreq_);
-				//更新最小频率
-				if (!freqMap_.empty()) {
-					minFreq_ = freqMap_.begin()->first;
-				}
+			auto recomputeMin = [&]() -> size_t {
+				size_t m = SIZE_MAX;
+				for (auto& kv : freqMap_) m = std::min(m, kv.first);
+				return (m == SIZE_MAX) ? 0 : m;
+				};
+
+			// 确保 minFreq_ 指向存在且非空的桶
+			auto fit = freqMap_.find(minFreq_);
+			if (minFreq_ == 0 || fit == freqMap_.end() || fit->second.empty()) {
+				minFreq_ = recomputeMin();
+				if (minFreq_ == 0) return; // 没有可逐出的桶
+				fit = freqMap_.find(minFreq_);
+				if (fit == freqMap_.end() || fit->second.empty()) return;
 			}
 
-			//移动节点到幽灵缓存
-			if (ghostCache_.size() >= ghostCapacity_) {
-				removeOldestGhost();
-			}
-			addToGhost(leastNode);
+			// 从最小频次桶尾部逐出
+			auto& listRef = fit->second;
+			NodePtr victim = listRef.back();
+			listRef.pop_back();
 
-			//从主缓存中移除
-			mainCache_.erase(leastNode->getKey());
+			// 桶空则删除，并重新计算 minFreq_
+			if (listRef.empty()) {
+				freqMap_.erase(fit);
+				minFreq_ = freqMap_.empty() ? 0 : recomputeMin();
+			}
+
+			// 从主表删除
+			if (victim) {
+				mainCache_.erase(victim->getKey());
+			}
 		}
+
 
         void removeFromGhost(NodePtr node){
 			if (!node->prev_.expired() && node->next_) {
@@ -128,7 +151,7 @@ namespace KArcCache
 
         void removeOldestGhost()
         {
-			auto& oldestGhostNode = ghostHead_->next_;
+			NodePtr oldestGhostNode = ghostHead_->next_;
 			if (oldestGhostNode != ghostTail_) {
 				removeFromGhost(oldestGhostNode);
 				ghostCache_.erase(oldestGhostNode->getKey());
@@ -143,16 +166,17 @@ namespace KArcCache
 			initializeLists();
 		}
 
-		bool put(Key key, Value value)
+		void put(Key key, Value value)
 		{
-			if (capacity_ == 0) return false;
+			if (capacity_ == 0) return;
 			std::lock_guard<std::mutex> lk(mutex_);
 			auto it = mainCache_.find(key);
 			if (it != mainCache_.end()) {
-				return updateExistingNode(it->second, value);
-
+				updateExistingNode(it->second, value);
+				return;
 			}
-			return addNewNode(key, value);
+			// 未命中：按容量淘汰后新建，频次初始化为 1
+			addNewNode(key, value);
 
 		}
 
@@ -168,6 +192,12 @@ namespace KArcCache
 			return false;
 		}
 
+		Value get(Key key) {
+			Value value;
+			get(key, value);
+			return value;
+		}
+
 		bool contain(Key key)
 		{
 			return mainCache_.find(key) != mainCache_.end();
@@ -178,9 +208,10 @@ namespace KArcCache
 			std::lock_guard<std::mutex> lk(mutex_);
 			auto it = ghostCache_.find(key);
 			if (it != ghostCache_.end()) {
+				NodePtr node = it->second;
 				removeFromGhost(it->second);
 				ghostCache_.erase(it);
-				addNewNode(it->second->getKey(), it->second->getValue());
+				addNewNode(node->getKey(), node->getValue());
 				return true;
 			}
 			return false;

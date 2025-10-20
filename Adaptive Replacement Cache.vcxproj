@@ -128,6 +128,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Adaptive Replacement Cache.cpp" />
+    <ClCompile Include="testHotDataAccess.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="KArcCache.h" />
@@ -135,6 +136,8 @@
     <ClInclude Include="KArcLfuPart.h" />
     <ClInclude Include="KArcLruPart.h" />
     <ClInclude Include="KICachePolicy.h" />
+    <ClInclude Include="LFU.h" />
+    <ClInclude Include="LRU_K.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
