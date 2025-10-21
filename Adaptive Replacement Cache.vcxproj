@@ -132,6 +132,7 @@
     <ClCompile Include="testHotDataAccess.cpp" />
     <ClCompile Include="testHotDataAccess.h" />
     <ClCompile Include="testLoopPattern.cpp" />
+    <ClCompile Include="testWorkloadShift.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="KArcCache.h" />
@@ -143,6 +144,7 @@
     <ClInclude Include="LRU_K.h" />
     <ClInclude Include="printResults.h" />
     <ClInclude Include="testLoopPattern.h" />
+    <ClInclude Include="testWorkloadShift.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

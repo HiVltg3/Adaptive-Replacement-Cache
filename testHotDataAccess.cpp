@@ -60,6 +60,6 @@ void tetestHotDataAccess::operator()() {
             }
         }
         // 打印测试结果
-        printResults(names[i], CAPACITY, get_operations[i], hits[i]);
+        printResults("Hotspot data access test", CAPACITY, get_operations[i], hits[i]);
     }
 }

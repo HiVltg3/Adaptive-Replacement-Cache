@@ -1,9 +1,11 @@
-//#include "testHotDataAccess.h"
+#include "testHotDataAccess.h"
 #include "testLoopPattern.h"
+#include "testWorkloadShift.h"
 int main() {
-	//tetestHotDataAccess a;
-		//a();
+	tetestHotDataAccess a;
+	a();
 	testLoopPattern b;
-
 	b();
+	testWorkloadShift c;
+	c();
 }
