@@ -13,12 +13,24 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Test functions">
+      <UniqueIdentifier>{f8a729af-688b-45b7-81f4-1cf40f2e0f0b}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Adaptive Replacement Cache.cpp">
-      <Filter>源文件</Filter>
+    <ClCompile Include="testHotDataAccess.h">
+      <Filter>Test functions</Filter>
     </ClCompile>
     <ClCompile Include="testHotDataAccess.cpp">
+      <Filter>Test functions</Filter>
+    </ClCompile>
+    <ClCompile Include="testLoopPattern.cpp">
+      <Filter>Test functions</Filter>
+    </ClCompile>
+    <ClCompile Include="printResults.cpp">
+      <Filter>Test functions</Filter>
+    </ClCompile>
+    <ClCompile Include="test.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
@@ -43,6 +55,12 @@
     </ClInclude>
     <ClInclude Include="LRU_K.h">
       <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="testLoopPattern.h">
+      <Filter>Test functions</Filter>
+    </ClInclude>
+    <ClInclude Include="printResults.h">
+      <Filter>Test functions</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
